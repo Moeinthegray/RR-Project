@@ -1,10 +1,7 @@
 
 library(tidyverse); library(xtable)
-Activity <- data.frame(read.csv(file = "./activity.csv"))
-summary(Activity)
-# good for RMarkDown
-xtable(summary(Activity))
-hist(Activity$steps)
+
+
 
 steps_mean <- mean(Activity$steps , na.rm = TRUE)
 steps_median <- median(Activity$steps , na.rm = TRUE)
@@ -26,52 +23,60 @@ max(interval_mean$Mean)
 which.max(interval_mean$Mean)
 interval_mean[which.max(interval_mean$Mean),]
 
-nrow(Activity[Activity$steps == "NA",])
-for (i in 1:nrow(Activity)) {
-  if (Activity$steps[i] == "NA"){
-    
-  }
-  
-}
-
-
-
-
+# Reading File
+Activity <- data.frame(read.csv(file = "./activity.csv"))
 
 # q 1-3
 daily_total <- Activity |>
                 group_by(date) |>
-                summarise(Total_Steps <- sum(steps, na.rm = TRUE)
-                          , Mean_Steps <- round(mean(steps, na.rm = TRUE),2)
-                          , Median_Steps <- median(steps , na.rm = TRUE))
+                summarise(Total_Steps <- sum(steps, na.rm = TRUE))
 
-view(daily_total)
-# q4
-plot(1:nrow(daily_total) , 
-     daily_total$`Mean_Steps <- round(mean(steps, na.rm = TRUE), 2)`, 
-     type = "l") 
+colnames(daily_total) <- c("Date", "Sum")
 
-# q5
+ggplot(data = daily_total)+
+  geom_histogram(aes(x = Sum))
+
+total_mean <- mean(daily_total$Sum) ; total_median <- median(daily_total$Sum)
+
+total_mean ; total_median
+
+# steps by time intervals
 interval_mean <- Activity |>
   group_by(interval) |>
   summarise(Mean = round(mean(steps,na.rm = TRUE),digits = 2))
 
-# tackling the NA problem
-Activity$Mean_Steps <- rep(interval_mean$Mean, 61)
-Activity[is.na(Activity$steps),]$steps <- 
-  Activity[is.na(Activity$steps),]$Mean_Steps
+# time series plot of time intervals and steps
+ggplot(data = interval_mean)+
+  geom_line(aes(x = interval, y = Mean))
 
-Activity <- Activity[,-4]
+# interval with maximum steps
+interval_mean[which.max(interval_mean$Mean),]$interval
 
-for (i in 1:nrow(Activity)) {
-  if(Activity$steps[i] == "NA"){
-    Activity$steps[i] <- Activity$Mean_Steps[i]
-  }
-  
-}
+
 #number of NAs in the original data
 nrow(Activity[Activity$steps == "NA",])
-Activity$New_Date <- as.Date(Activity$date,
+
+# replacing NAs with time interval mean
+Activity_NA <- Activity
+Activity_NA$Mean_Steps <- rep(interval_mean$Mean, 61)
+Activity_NA[is.na(Activity_NA$steps),]$steps <- 
+  Activity_NA[is.na(Activity_NA$steps),]$Mean_Steps
+
+daily_total_NA <- Activity_NA |>
+  group_by(date) |>
+  summarise(Total_Steps <- sum(steps, na.rm = TRUE))
+
+colnames(daily_total_NA) <- c("Date", "Sum")
+
+ggplot(data = daily_total_NA)+
+  geom_histogram(aes(x = Sum))
+
+total_mean_NA <- mean(daily_total$Sum)
+total_median_NA <- median(daily_total$Sum)
+c(total_mean , total_mean_NA, total_median, total_median_NA)
+
+?as.Date()
+Activity_NA$New_Date <- as.Date(Activity_NA$date,
                              tryFormats =c("%Y-%m-%D" , "%Y/%m/%D"))
 
 Activity$Day <- weekdays(Activity$New_Date)
