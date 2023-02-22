@@ -10,15 +10,14 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 In order to answer our questions, first we read the data "activity.csv" into a data frame, which we call "Activity"
-```{r reading data, results='hide' }
+```{r reading data, message=FALSE}
 library(tidyverse)
 Activity <- data.frame(read.csv(file = "./activity.csv"))
 ```
 
 Then we group data frame by "date" variable and calculate:  
 Total number of steps taken each day and a histogram of this value over time  
-Mean and Median of total number of steps
-```{r histogram and mean and median, warning=FALSE}
+```{r histogram and mean and median, message=FALSE}
 daily_total <- Activity |>
                 group_by(date) |>
                 summarise(Total_Steps <- sum(steps, na.rm = TRUE))
@@ -29,7 +28,10 @@ ggplot(data = daily_total)+
   geom_histogram(aes(x = Sum))
 
 total_mean <- mean(daily_total$Sum) ; total_median <- median(daily_total$Sum)
+```
 
+Mean and Median of total number of steps
+```{r Mean and Median}
 total_mean ; 
 
 total_median
@@ -47,12 +49,10 @@ ggplot(data = interval_mean)+
 
 ```
 
-We also report the time interval in which the maximum steps have been taken. 
+We also we can report the time interval in which the maximum steps have been taken: 
 ```{r}
 # interval with maximum steps
 interval_mean[which.max(interval_mean$Mean),]$interval
-
-
 ```
 
 Total number of NA values in steps:
@@ -70,7 +70,7 @@ Activity_NA[is.na(Activity_NA$steps),]$steps <-
 ```
 
 Then we repeat the calculations for daily number of steps histogram and its mean and median:
-```{r NA replacement}
+```{r NA replacement, message=FALSE}
 daily_total_NA <- Activity_NA |>
   group_by(date) |>
   summarise(Total_Steps <- sum(steps, na.rm = TRUE))
@@ -124,15 +124,17 @@ colnames(interval_means) <- c("Interval", "Weekdays_Mean", "Weekends_Mean")
 ```
 
 And finally plot the requested plot through ggplot():
-```{r}
-ggplot(data = interval_means) +
-  geom_line(aes(x = Interval, y = Weekdays_Mean) , col = "blue") +
-  geom_line(aes(x = Interval, y = Weekends_Mean)) +
-  labs(
-       title = "Weekdays and Weekends Average Number of Steps",
+```{r, warning=FALSE}
+colors <- c("Weekdays_Mean" = "blue", "Weekends_Mean" = "red")
+
+ggplot(interval_means, aes(x = Interval)) +
+    geom_line(aes(y = Weekdays_Mean, color = "Weekdays_Mean"), size = .5) +
+    geom_line(aes(y = Weekends_Mean, color = "Weekends_Mean"), size = .5) +
+    labs(title = "Weekdays and Weekends Average Number of Steps",
        x = "Time Interval ",
        y = "Steps",
-       )
+       color = "Legend") +
+    scale_color_manual(values = colors)
 
 ```
 
