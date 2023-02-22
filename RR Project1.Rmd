@@ -1,0 +1,138 @@
+---
+title: "RR Project 1"
+author: "Moein Mahmoudi"
+date: "2023-02-20"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+In order to answer our questions, first we read the data "activity.csv" into a data frame, which we call "Activity"
+```{r reading data, results='hide' }
+library(tidyverse)
+Activity <- data.frame(read.csv(file = "./activity.csv"))
+```
+
+Then we group data frame by "date" variable and calculate:  
+Total number of steps taken each day and a histogram of this value over time  
+Mean and Median of total number of steps
+```{r histogram and mean and median, warning=FALSE}
+daily_total <- Activity |>
+                group_by(date) |>
+                summarise(Total_Steps <- sum(steps, na.rm = TRUE))
+
+colnames(daily_total) <- c("Date", "Sum")
+
+ggplot(data = daily_total)+
+  geom_histogram(aes(x = Sum))
+
+total_mean <- mean(daily_total$Sum) ; total_median <- median(daily_total$Sum)
+
+total_mean ; 
+
+total_median
+```
+
+Then we group data frame by time interval variable and plot a time series of steps in each interval. 
+```{r intervals}
+interval_mean <- Activity |>
+  group_by(interval) |>
+  summarise(Mean = round(mean(steps,na.rm = TRUE),digits = 2))
+
+# time series plot of time intervals and steps
+ggplot(data = interval_mean)+
+  geom_line(aes(x = interval, y = Mean))
+
+```
+
+We also report the time interval in which the maximum steps have been taken. 
+```{r}
+# interval with maximum steps
+interval_mean[which.max(interval_mean$Mean),]$interval
+
+
+```
+
+Total number of NA values in steps:
+```{r NA number}
+nrow(Activity[Activity$steps == "NA",])
+```
+
+To tackle the problem of NAs, we copy a data frame exactly same to the original data frame, but we add a variable Mean_Steps to it. The variable is the average of steps in each time interval and we replicate it 61 times for all days. Then we replace the value of *steps* for each row that is same to NA with this variable.
+```{r NA tackling}
+Activity_NA <- Activity
+Activity_NA$Mean_Steps <- rep(interval_mean$Mean, 61)
+Activity_NA[is.na(Activity_NA$steps),]$steps <- 
+  Activity_NA[is.na(Activity_NA$steps),]$Mean_Steps
+
+```
+
+Then we repeat the calculations for daily number of steps histogram and its mean and median:
+```{r NA replacement}
+daily_total_NA <- Activity_NA |>
+  group_by(date) |>
+  summarise(Total_Steps <- sum(steps, na.rm = TRUE))
+
+colnames(daily_total_NA) <- c("Date", "Sum")
+
+ggplot(data = daily_total_NA)+
+  geom_histogram(aes(x = Sum))
+
+total_mean_NA <- mean(daily_total_NA$Sum)
+total_median_NA <- median(daily_total_NA$Sum)
+```
+
+As we see, there is a difference between before and after of this replacement:
+```{r difference}
+c(total_mean , total_mean_NA, total_median, total_median_NA)
+```
+
+In the next section, we make a new variable to segregate weekends and working days of the week through the weekdays() function. 
+```{r weekdays}
+# convert character to date 
+Activity_NA$New_Date <- as.Date(Activity_NA$date)
+# applying function of weekdays
+Activity_NA$Day <- weekdays(Activity_NA$New_Date)
+# make a new variable
+Activity_NA$Type_of_Day <- "NA"
+# define weekends and weekdays
+Activity_NA[Activity_NA$Day == "Saturday",]$Type_of_Day <- "Weekends"
+Activity_NA[Activity_NA$Day == "Sunday",]$Type_of_Day <- "Weekends"
+Activity_NA[Activity_NA$Type_of_Day != "Weekends",]$Type_of_Day <- "Weekdays"
+Activity_NA$Type_of_Day <- as.factor(Activity_NA$Type_of_Day)
+
+```
+
+For the last plot, at first, we calculate average of steps taken by time intervals separately for weekends and weekdays, then we join them together in "interval_means" data frame:
+```{r}
+interval_mean_Weekdays <- Activity_NA[Activity_NA$Type_of_Day == "Weekdays",] |>
+  group_by(interval) |>
+  summarise(Mean = round(mean(steps,na.rm = TRUE),digits = 2))
+
+interval_mean_Weekends <- Activity_NA[Activity_NA$Type_of_Day == "Weekends",] |>
+  group_by(interval) |>
+  summarise(Mean = round(mean(steps,na.rm = TRUE),digits = 2))
+
+interval_means <- data.frame(interval_mean_Weekdays$interval,
+                             interval_mean_Weekdays$Mean , 
+                             interval_mean_Weekends$Mean)
+
+colnames(interval_means) <- c("Interval", "Weekdays_Mean", "Weekends_Mean")
+
+```
+
+And finally plot the requested plot through ggplot():
+```{r}
+ggplot(data = interval_means) +
+  geom_line(aes(x = Interval, y = Weekdays_Mean) , col = "blue") +
+  geom_line(aes(x = Interval, y = Weekends_Mean)) +
+  labs(
+       title = "Weekdays and Weekends Average Number of Steps",
+       x = "Time Interval ",
+       y = "Steps",
+       )
+
+```
+
